@@ -21,18 +21,19 @@ client = Client.for_testnet()
 client.set_operator(buyer_account, buyer_key)
 
 
-def build_signed_transfer(requirements: dict) -> str:
+def build_signed_transfer(requirements: dict, object_id: str) -> str:
     pay_to = AccountId.from_string(requirements["payTo"])
     fee_payer = AccountId.from_string(requirements["extra"]["feePayer"])
     amount = int(requirements["amount"])
 
-    tx_id = TransactionId.generate(fee_payer)  # i guess i should charge the facilitator instead of the buyer LMAO
+    tx_id = TransactionId.generate(fee_payer)  # i guess i should charge the facilitator instead of the buyer LMAO (for network fee)
 
     tx = (
         TransferTransaction()
         .add_hbar_transfer(buyer_account, -amount)
         .add_hbar_transfer(pay_to, amount)
         .set_transaction_id(tx_id)
+        .set_transaction_memo(f"memo check: {object_id}")
     )
     tx.freeze_with(client)
     tx.sign(buyer_key)
@@ -49,7 +50,7 @@ def pay_for_handoff(object_id: str):
             "x402Version": 2,
             "resource": {"url": f"{ROBOT_A_URL}/release-object"},
             "accepted": requirements,
-            "payload": {"transaction": build_signed_transfer(requirements)},
+            "payload": {"transaction": build_signed_transfer(requirements, object_id)},
         }
         header = base64.b64encode(json.dumps(payment_payload).encode()).decode()
         resp = requests.post(
@@ -62,4 +63,4 @@ def pay_for_handoff(object_id: str):
 
 
 if __name__ == "__main__":
-    pay_for_handoff("cube-01")
+    pay_for_handoff("virtual cube")
