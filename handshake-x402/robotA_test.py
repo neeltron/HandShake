@@ -8,19 +8,25 @@ Created on Sat Sep 12 01:55:06 2026
 from pymycobot.mycobot import MyCobot
 import time
 
-PORT = "/dev/ttyUSB0"
+PORT = "/dev/ttyUSB1"
 BAUDRATE = "1000000"
 
 mc = MyCobot(PORT, BAUDRATE)
 
-target_angles = [0, 0, 0, 0, 0, 0]
+home = [0, 0, 0, 0, 0, 0]
+
+left_air = [-90, -38, -30, 72, 0, -45]
+
+left_pos = [-90, -38, -120, 72, 0, -45]
+
+
+
 speed = 50
-
-mc.send_angles(target_angles, speed)
+time.sleep(1)
+mc.send_angles(home, speed)
 time.sleep(2)
-
-mc.send_angle(2, 0, speed)
-
-print("J1 min/max:", mc.get_joint_min_angle(1), mc.get_joint_max_angle(1))
+mc.send_angles(left_air, speed)
+time.sleep(2)
+mc.send_angles(left_pos, speed)
 
 print("Current angles:", mc.get_angles)
