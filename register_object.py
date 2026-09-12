@@ -37,4 +37,4 @@ tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
 w3.eth.wait_for_transaction_receipt(tx_hash)
 
 print(f'Registered "{OBJECT_LABEL}"')
-print("ObjectID (bytes32, hex):", object_id.hex())
+print("ObjectID:", object_id.hex())
