@@ -7,8 +7,10 @@ Created on Thu Sep 10 15:50:57 2026
 
 import base64
 import json
+import os
 import requests
 from flask import Flask, request, jsonify
+from web3 import Web3
 
 FACILITATOR_URL = "https://api.testnet.blocky402.com"
 ROBOT_A_ACCOUNT_ID = "0.0.10422144"
@@ -17,6 +19,27 @@ OBJECT_PRICES_HBAR = {
     "cube-01": "10",
     "cube-03": "50",
 }
+
+BASE_SEPOLIA_RPC = os.environ.get("BASE_SEPOLIA_RPC", "https://sepolia.base.org")
+CUSTODY_CONTRACT_ADDRESS = "0x725C1614Eb1c9E160E4B07d809D19205c1a5a669"
+ROBOT_B_ONCHAIN_ADDRESS = "0xEd2Ae4494237575a2509c623E10aD8311A6a3D74"
+
+
+def read_key(filename):
+    with open(os.path.join("..", filename)) as f:
+        return f.read().strip()
+
+
+w3 = Web3(Web3.HTTPProvider(BASE_SEPOLIA_RPC))
+deployer_key = read_key("DEPLOYER_PRIVATE_KEY.txt")
+deployer_account = w3.eth.account.from_key(deployer_key)
+
+with open("objcustody.abi.json") as f:
+    custody_abi = json.load(f)
+
+custody_contract = w3.eth.contract(
+    address=Web3.to_checksum_address(CUSTODY_CONTRACT_ADDRESS), abi=custody_abi
+)
 
 app = Flask(__name__)
 
@@ -45,6 +68,22 @@ def build_payment_requirements(fee_payer: str, object_id: str) -> dict:
         "maxTimeoutSeconds": 180,
         "extra": {"feePayer": fee_payer},
     }
+
+
+def transfer_custody_to_buyer(object_id: str, buyer_address: str):
+    object_id_hash = Web3.keccak(text=object_id)
+    tx = custody_contract.functions.transferCustody(
+        object_id_hash, Web3.to_checksum_address(buyer_address)
+    ).build_transaction({
+        "from": deployer_account.address,
+        "nonce": w3.eth.get_transaction_count(deployer_account.address),
+        "gas": 200_000,
+        "gasPrice": w3.eth.gas_price,
+    })
+    signed = deployer_account.sign_transaction(tx)
+    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+    receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+    return tx_hash.hex(), receipt.status
 
 
 @app.post("/release-object")
@@ -84,7 +123,15 @@ def release_object():
 
     print(f"[Robot A] Payment settled ({settlement.get('transactionId')}) — releasing: {object_id}")
 
-    return jsonify({"status": "released", "objectId": object_id, "settlement": settlement})
+    transfer_tx_hash, transfer_status = transfer_custody_to_buyer(object_id, ROBOT_B_ONCHAIN_ADDRESS)
+    print(f"[Robot A] Custody transferred on-chain — tx {transfer_tx_hash}, status {transfer_status}")
+
+    return jsonify({
+        "status": "released",
+        "objectId": object_id,
+        "settlement": settlement,
+        "custodyTransferTx": transfer_tx_hash,
+    })
 
 
 if __name__ == "__main__":
