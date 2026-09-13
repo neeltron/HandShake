@@ -14,12 +14,7 @@ import time
 import cv2
 import requests
 from pyzbar.pyzbar import decode
-from eth_account import Account
 from web3 import Web3
-from x402 import x402ClientSync
-from x402.mechanisms.evm import EthAccountSigner
-from x402.mechanisms.evm.exact.client import ExactEvmScheme
-from x402.http.clients.requests import wrapRequestsWithPayment
 from hiero_sdk_python import AccountId, Client, PrivateKey, TransactionId, TransferTransaction
 from pymycobot.mycobot import MyCobot
 
@@ -33,14 +28,13 @@ ALLOWED_OBJECT_IDS = {"cube-01", "cube-03"}
 ROBOT_B_ACCOUNT_ID = "0.0.10447952"
 ROBOT_A_URL = "https://coupon-makers-suggests-off.trycloudflare.com"
 
+
 def read_key(filename):
     with open(os.path.join("..", filename)) as f:
         return f.read().strip()
 
-X402_PRIVATE_KEY = read_key("X402_PRIVATE_KEY.txt")
-SUBGRAPH_ID = "QmcTd2zdQvix9Cr9GvJsnFeWRNsanya8qD6MnTV5hMntoY"
-GRAPH_GATEWAY_URL = os.environ.get("GRAPH_GATEWAY_URL", "https://testnet.gateway.thegraph.com/api/x402")
-GRAPH_ENDPOINT = f"{GRAPH_GATEWAY_URL}/subgraphs/id/{SUBGRAPH_ID}"
+
+STUDIO_QUERY_URL = "https://api.studio.thegraph.com/query/1760234/hand-shake/version/latest"
 ROBOT_A_ONCHAIN_ADDRESS = "0x1936Cb005DB976AB1251C3b887Ede572A5E4513f"
 
 buyer_account = AccountId.from_string(ROBOT_B_ACCOUNT_ID)
@@ -48,10 +42,7 @@ buyer_key = PrivateKey.from_string_ecdsa(read_key("ROBOT_B_PRIVATE_KEY.txt"))
 hedera_client = Client.for_testnet()
 hedera_client.set_operator(buyer_account, buyer_key)
 
-_graph_account = Account.from_key(X402_PRIVATE_KEY)
-_graph_signer = EthAccountSigner(_graph_account)
-_graph_client = x402ClientSync().register("base-sepolia", ExactEvmScheme(_graph_signer))
-_graph_session = wrapRequestsWithPayment(requests.Session(), _graph_client)
+
 class QRReadError(Exception):
     pass
 
@@ -97,8 +88,8 @@ def get_current_holder(object_id: str) -> str | None:
       object(id: $id) { id label currentHolder transferCount }
     }
     """
-    resp = _graph_session.post(
-        GRAPH_ENDPOINT,
+    resp = requests.post(
+        STUDIO_QUERY_URL,
         json={"query": query, "variables": {"id": "0x" + object_id_bytes32}},
     )
     resp.raise_for_status()
@@ -200,6 +191,7 @@ def verify_and_pay(camera_index: int = 0) -> bool:
     print("Payment settled:", resp.json())
     speak("Payment successful")
     return True
+
 
 home = [0, 0, 0, 0, 0, 45]
 left_air = [-90, 0, 0, 0, 0, 45]
