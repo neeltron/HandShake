@@ -24,7 +24,7 @@ from hiero_sdk_python import AccountId, Client, PrivateKey, TransactionId, Trans
 ALLOWED_OBJECT_IDS = {"cube-01", "cube-03"}
 
 ROBOT_B_ACCOUNT_ID = "0.0.10447952"
-ROBOT_A_URL = "http://localhost:4021"
+ROBOT_A_URL = "https://entertaining-acknowledge-cat-clearly.trycloudflare.com "
 
 def read_key(filename):
     with open(os.path.join("..", filename)) as f:
