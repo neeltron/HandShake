@@ -46,4 +46,3 @@ mc.send_angles(mid_air, speed)
 time.sleep(2)
 mc.send_angles(home, speed)
 time.sleep(2)
-

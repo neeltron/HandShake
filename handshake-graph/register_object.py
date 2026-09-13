@@ -8,6 +8,7 @@ Created on Sat Sep 12 17:44:49 2026
 import json
 import os
 from web3 import Web3
+import qrcode
 
 def read_key(filename):
     with open(os.path.join("..", filename)) as f:
@@ -16,7 +17,10 @@ def read_key(filename):
 RPC_URL = os.environ.get("BASE_SEPOLIA_RPC", "https://sepolia.base.org")
 DEPLOYER_PRIVATE_KEY = read_key("DEPLOYER_PRIVATE_KEY.txt")
 CONTRACT_ADDRESS = "725C1614Eb1c9E160E4B07d809D19205c1a5a669"
-OBJECT_LABEL = os.environ.get("OBJECT_LABEL", "cube-01")
+OBJECT_LABEL = os.environ.get("OBJECT_LABEL", "cube-03")
+
+ROBOT_A_HEDERA_ACCOUNT_ID = os.environ.get("ROBOT_A_HEDERA_ACCOUNT_ID", "0.0.10422144")
+COST_HBAR = os.environ.get("OBJECT_COST_HBAR", "50")
 
 with open("objcustody.abi.json") as f:
     abi = json.load(f)
@@ -38,3 +42,15 @@ w3.eth.wait_for_transaction_receipt(tx_hash)
 
 print(f'Registered "{OBJECT_LABEL}"')
 print("ObjectID:", object_id.hex())
+print("Tx hash:", tx_hash.hex())
+
+qr_payload = {
+    "objectId": OBJECT_LABEL,
+    "cost": COST_HBAR,
+    "payTo": ROBOT_A_HEDERA_ACCOUNT_ID,
+}
+qr_output_path = f"{OBJECT_LABEL}_qr.png"
+qrcode.make(json.dumps(qr_payload)).save(qr_output_path)
+
+print(f"{qr_output_path}")
+print("Encoded:", qr_payload)
